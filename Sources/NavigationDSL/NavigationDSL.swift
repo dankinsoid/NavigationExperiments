@@ -44,22 +44,23 @@ public protocol Flow {
     /// - Warning: Never call this method directly.
     @FlowBuilder
     func build(context: Context) -> any Flow
+		func update(context: Context)
     func modify(traits: inout FlowTraits, context: Context)
     func flattened(context: Context) -> [any Flow]
 }
 
 extension Flow {
-    
-    public func modify(traits: inout FlowTraits, context: Context) {}
-    public func flattened(context: Context) -> [any Flow] { [self] }
 
-    func update(context: Context) {
-        if self is NonFlow {
-            return
-        }
-        build(context: context)
-            .update(context: context)
-    }
+	public func modify(traits: inout FlowTraits, context: Context) {}
+	public func flattened(context: Context) -> [any Flow] { [self] }
+
+	public func update(context: Context) {
+		if self is EmptyFlow {
+			return
+		}
+		build(context: context)
+			.update(context: context)
+	}
 }
 
 @propertyWrapper
@@ -151,14 +152,14 @@ public enum FlowBuilder {
     }
 }
 
-public struct NonFlow: Flow {
+public struct EmptyFlow: Flow {
 
     public func flattened(context: Context) -> [any Flow] {
         []
     }
 
     public func build(context: Context) -> any Flow {
-        fatalError("NonFlow cannot be used as a Flow")
+        fatalError("EmptyFlow cannot be used as a Flow")
         return self
     }
 }
@@ -174,57 +175,61 @@ public struct FlowArray: Flow {
     public func flattened(context: Context) -> [any Flow] {
         body.flatMap { $0.flattened(context: context) }
     }
-    
+
     public func build(context: Context) -> any Flow {
         for flow in body {
             flow.update(context: context)
         }
-        return NonFlow()
+        return EmptyFlow()
     }
 }
 
 // Flows
 
 public struct Screen: Flow {
-    
-    private let screenType: UIViewController.Type
-    private let createScreen: @MainActor (Context) -> UIViewController
-    private let updateScreen: @MainActor (UIViewController, Context) -> Void
-
-    public init<Content: UIViewController>(
-        _ content: @escaping @MainActor (Context) -> Content,
-        update: @escaping @MainActor (Content, Context) -> Void = { _, _ in }
-    ) {
-        self.screenType = Content.self
-        createScreen = {
-            content($0)
-        }
-        updateScreen = { viewController, context in
-            if let typedVC = viewController as? Content {
-                update(typedVC, context)
-            }
-        }
-    }
-
-    public init<Content: UIViewController>(
-        _ content: @escaping @autoclosure @MainActor () -> Content,
-        update: @escaping @MainActor (Content, Context) -> Void = { _, _ in }
-    ) {
-        self.init({ _ in  content() }, update: update)
-    }
-
-//    public init<Content: View>(
-//        @ViewBuilder _ content: @escaping @MainActor () -> Content
-//    ) {
-//        
-//    }
-    
-    public func build(context: Context) -> any Flow {
-    
-        context.provide(controller: createScreen(context))
-    
-        return NonFlow()
-    }
+	
+	private let screenType: UIViewController.Type
+	private let createScreen: @MainActor (Context) -> UIViewController
+	private let updateScreen: @MainActor (UIViewController, Context) -> Void
+	
+	public init<Content: UIViewController>(
+		_ content: @escaping @MainActor (Context) -> Content,
+		update: @escaping @MainActor (Content, Context) -> Void = { _, _ in }
+	) {
+		self.screenType = Content.self
+		createScreen = {
+			content($0)
+		}
+		updateScreen = { viewController, context in
+			if let typedVC = viewController as? Content {
+				update(typedVC, context)
+			}
+		}
+	}
+	
+	public init<Content: UIViewController>(
+		_ content: @escaping @autoclosure @MainActor () -> Content,
+		update: @escaping @MainActor (Content, Context) -> Void = { _, _ in }
+	) {
+		self.init({ _ in  content() }, update: update)
+	}
+	
+	public init<Content: View>(
+		@ViewBuilder _ content: @escaping @MainActor () -> Content
+	) {
+		self.init { _ -> UIHostingController<Content> in
+			let hostingController = UIHostingController(rootView: content())
+			hostingController.view.backgroundColor = .clear
+			return hostingController
+		} update: { controller, _ in
+			controller.rootView = content()
+		}
+	}
+	
+	public func build(context: Context) -> any Flow {
+		context.provide(controller: createScreen(context))
+		return EmptyFlow()
+	}
 }
 
 public struct NavigationFlow: Flow {
@@ -297,7 +302,7 @@ public struct NavigationFlow: Flow {
                 for flow in screens(context) {
                     flow.update(context: context)
                 }
-    
+	
                 if newControllers != controller.viewControllers {
                     controller.setViewControllers(
                         newControllers,
@@ -395,7 +400,7 @@ public struct Present: Flow {
     ) {}
 
     public func build(context: Context) -> any Flow {
-        return NonFlow()
+        return EmptyFlow()
     }
 }
 

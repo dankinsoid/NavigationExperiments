@@ -200,12 +200,13 @@ struct SelectPaymentMethodScreen: Flow {
     var onPay: @MainActor (PaymentMethod) -> Void = { _ in }
     var onAddNewCard: @MainActor () -> Void = {}
     var onPaidSuccessfully: @MainActor () -> Void = {}
-    
+
     func build(context: Context) -> any Flow {
     }
 }
 
 struct CardDetailsScreen: Flow {
+
     var onCompletion: @MainActor (PaymentPayload) -> Void = { _ in }
     var onReload: @MainActor () -> Void = {}
     var onClose: @MainActor () -> Void = {}
@@ -215,15 +216,16 @@ struct CardDetailsScreen: Flow {
 }
 
 struct LoadingScreen: Flow {
-    
+
     func build(context: Context) -> any Flow {
     }
 }
 
 struct PaymentWebScreen: Flow {
+
     var url: URL
     var onRedirect: @MainActor (URL) -> Void = { _ in }
-    
+
     func build(context: Context) -> any Flow {
     }
 }

@@ -14,7 +14,8 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/pointfreeco/swift-perception.git", from: "2.0.0"),
-        .package(url: "https://github.com/ekazaev/route-composer.git", from: "2.21.0")
+        .package(url: "https://github.com/ekazaev/route-composer.git", from: "2.21.0"),
+				.package(url: "https://github.com/pointfreeco/swift-navigation.git", from: "2.6.0")
     ],
     targets: [
         .target(
@@ -32,5 +33,13 @@ let package = Package(
             name: "AsyncNavigation",
             dependencies: [.product(name: "Perception", package: "swift-perception")]
         ),
+				.target(
+				name: "TCANavigation",
+				dependencies: [
+					.product(name: "Perception", package: "swift-perception"),
+					.product(name: "SwiftNavigation", package: "swift-navigation"),
+					.product(name: "UIKitNavigation", package: "swift-navigation")
+				]
+		),
     ]
 )
